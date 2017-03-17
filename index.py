@@ -10,8 +10,9 @@ from functools import reduce
 
 from math import log10
 
-
 from serde import serialize, deserialize
+
+from common import *
 
 stemmer = nltk.stem.PorterStemmer()
 
@@ -26,18 +27,6 @@ document_dir = args.source
 # Index is set a a defaultdict(set) so we never have to explicitly check if
 # a key in index exists before adding a document to it
 index = defaultdict(set)
-
-def vecLength(vec):
-    squared_length = 0
-    for num in vec:
-        squared_length += num**2
-
-    return squared_length**0.5
-
-def stems(document):
-    for sentence in nltk.sent_tokenize(doc):
-        for word in nltk.word_tokenize(sentence):
-            yield stemmer.stem(word)
 
 #================================================
 # Main Indexing Code
@@ -56,7 +45,7 @@ for document_name in doc_list:
         doc = document.read().lower()
         doc_id = int(document_name)
 
-        word_count = Counter(stems(document))
+        word_count = Counter(stems(doc))
         document_counts[doc_id] = word_count
 
         for word in word_count:
@@ -68,11 +57,13 @@ index = defaultdict(set)
 for doc_id, counts in document_counts.items():
     weights = {}
     for word, count in counts.items():
-        weights[word] = (1 + log10(count)) * log10(N/df[word])
+        # Document weighted by term frequency
+        weights[word] = (1 + log10(count))
     length = vecLength(weights.values())
     norm_weights = {word: weight/length for word, weight in weights.items()}
 
     for word, norm_weight in norm_weights.items():
+        # Document uses cosine normalization
         index[word].add( (doc_id, norm_weight) )
 
 # Create a dictionary which stores the data necessary to retrieve

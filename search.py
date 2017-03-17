@@ -15,6 +15,8 @@ from math import log10
 
 from functools import reduce
 
+from common import *
+
 stemmer = nltk.stem.PorterStemmer()
 
 def docWeights(term, dictionary, postings):
@@ -24,13 +26,6 @@ def docWeights(term, dictionary, postings):
     postings.seek(pos)
     docs = deserialize(postings.read(size))
     return docs
-
-def vecLength(vec):
-    squared_length = 0
-    for num in vec:
-        squared_length += num**2
-
-    return squared_length**0.5
 
 def getVec(counts, df, N):
     weights = {}
@@ -86,15 +81,20 @@ else:
 
 # Write out the results of each query to the output
 for query in query_lines:
-    # Remove trailing whitespace from the query line
-    query = query.strip().lower().split()
-    query = [stemmer.stem(w) for w in query]
-    print(query)
-    query_vec = getVec(Counter(query), df, N)
+    # Heap contains the calculated relevance of the documents for this query
     heap = defaultdict(float)
+
+    # query_vec is a mapping between query terms and their ltc weight
+    query_vec = queryVec(query, df, N)
+
+    print(query_vec)
     for word, weight in query_vec.items():
         results = docWeights(word, dictionary, postings_file)
-        for r in results:
-            heap[r[0]] += r[1]*weight
-    output.write(" ".join(str(i) for i, _ in sorted(heap.items(), key=lambda x: x[1])[-10:]) + '\n')
-    print(" ".join(str(i) for i, _ in sorted(heap.items(), key=lambda x: x[1])[-10:]))
+        for doc_id, doc_term_weight in results:
+            heap[doc_id] += doc_term_weight * weight
+
+    top10 = sorted(heap.items(), key=lambda x: x[1], reverse=True)[:10]
+    out = " ".join(str(i) for i, _ in top10)
+    output.write(out + '\n')
+
+    print(out)
