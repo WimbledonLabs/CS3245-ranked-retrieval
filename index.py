@@ -36,6 +36,10 @@ doc_list = os.listdir(document_dir)
 N = len(doc_list)
 
 document_counts = {}
+
+# df indexes the count of documents with a word stem
+# df is inserted into the dictionary when it is written to disk using the
+# key "DF" (which won't collide with stems since all of the stems are lowercase)
 df = defaultdict(int)
 
 # Iterate through the files in the provided directory, and create a map between
@@ -51,7 +55,6 @@ for document_name in doc_list:
         for word in word_count:
             df[word] += 1
 
-document_weights = defaultdict(list)
 index = defaultdict(set)
 
 for doc_id, counts in document_counts.items():
@@ -69,17 +72,22 @@ for doc_id, counts in document_counts.items():
 # Create a dictionary which stores the data necessary to retrieve
 # the posting for the term
 dictionary = {}
+
+# include the document frequency and total document count in the dictionary
+# for quick retrieval by the search script (uppercase keys prevent collisions
+# with word stems, which are lowercase)
 dictionary["DF"] = df
 dictionary["N"] = N
 
+# write the values of the index to a postings file
 with open(args.postings, 'wb') as postings_file:
     for word, docs in index.items():
         s = serialize(docs)
+        # Write a tuple with information for indexing the postings file, as well
+        # as the count of documents to potentially optimize searching
         dictionary[word] = (len(docs), len(s), postings_file.tell())
         postings_file.write(s)
 
 # Write the dictionary to the specified dictionary file
 with open(args.dictionary, 'wb') as dict_file:
     dict_file.write(serialize(dictionary))
-
-print("GOGOGO!")
