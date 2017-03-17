@@ -1,0 +1,96 @@
+1. In this assignment, we didn't ask you to support phrasal queries, which is a feature that is
+typically supported in web search engines. Describe how you would support phrasal search in
+conjunction with the VSM model. A sketch of the algorithm is sufficient. (For those of you who
+like a challenge, please go ahead and implement this feature in your submission but clearly
+demarcate it in your code and allow this feature to be turned on or off using the command line
+switch "-x" (where "-x" means to turn on the extended processing of phrasal queries). We will
+give a small bonus to submissions that achieve this functionality correctly).
+
+Phrasal queries could be implemented by using ngrams as the dimensions of a
+vector space model. Since we are using the vector space model rather than
+boolean queries we have other options besides add-one smoothing to improve
+query results. Specifically, we could use both unigrams AND bigrams in our
+vector space.
+
+A sketch of this solution is provided below:
+Indexing:
+    0. A document would be split into unigrams _and_ bigrams
+    1. n-tuples would represent n-gram terms in the index. START and END
+       symbols in the n-gram would be represented as an empty string
+    2. lnc weighting would be applied to the entire set of n-grams in the document
+
+Search:
+    0. The query would be split into unigrams and bigrams (same as document)
+    1. ltc weighting would be applied to the entire set of n-grams in the query
+    2. Documents would be ranked by the dot product of the query vector and
+       the document vectors
+
+
+2. Describe how your search engine reacts to long documents and long queries as compared to
+short documents and queries. Is the normalization you use sufficient to address the problems
+(see Section 6.4.4 for a hint)? In your judgement, is the ltc.lnc scheme (n.b., not the ranking
+scheme you were asked to implement) sufficient for retrieving documents from the
+Reuters-21578 collection?
+
+In my search engine, the length of the document affects the tf variable used to
+calculate the weight of each term. As documents get longer, the count for each
+term increases. Since we are using log weighting for the frequency of the term,
+it causes an averaging effect on the term weights, even if the ratio of the
+weights stays the same. This is demonstrated by the calculations below which
+show the final weights for two documents with the same ratio between the terms.
+Document 2, the larger of the two documents, has a smaller variance in weights,
+which demonstrates the averaging effect for larger documents.
+
+__________
+Document 1|
+-------------------------------------------
+Word    Count   1 + Log(tf)    Normalized
+this    5       1.6989700043   0.5328713393
+is      2       1.3010299957   0.4080599389
+an      7       1.84509804     0.5787034858
+example 3       1.4771212547   0.4632898634
+         LENGTH 3.1883306139
+__________
+Document 2|
+-------------------------------------------
+Word    Count   1 + Log(tf)    Normalized
+this    50      2.6989700043   0.521255363
+is      20      2.3010299957   0.4444007246
+an      70      2.84509804     0.5494772484
+example 30      2.4771212547   0.4784094439
+        LENGTH  5.1778268311
+
+An additional consideration for the weighting scheme used in this search engine
+is that larger documents will likely have more distinct queries than smaller
+documents. This greatly reduces the weight of more common (and potentially
+important) words. As an example, consider a document with 127 words where 27 of
+those words only appear a single time, and 1 word appears 100 times. With the
+weighting scheme used for documents, the weight of the term appearing 100 times
+is only 0.5 despite the document consisting of almost entirely of instances of
+that word.
+
+In my judgement, ltc.lnc is sufficient for searching the corpus. This is based
+on experimentation (incorrect implementation) when developing the query logic.
+In either case, the frequency of the term in all documents is factored into the
+document ranking, so the retrieved documents will be similar in either case.
+This weighting scheme has the disadvantage that documents cannot be locally
+indexed. In other words, the entire set of documents must be retrieved before
+the weights for each document can be calculated. This property could cause
+memory issues when addressing large datasets, but does not cause a problem with
+the Reuters-21578 collection.
+
+
+3. Do you think zone or field parametric indices would be useful for practical search in the Reuters
+collection? Note: the Reuters collection does have metadata for each article but the quality of
+the metadata is not uniform, nor are the metadata classifications uniformly applied (some
+documents have it, some don't). Hint: for the next Homework #4, we will be using field
+metadata, so if you want to base Homework #4 on your Homework #3, you're welcomed to
+start support of this early (although no extra credit will be given if it's right).
+
+Yes, allowing for zone or field parametric indices would be useful for practical
+searches. First, if the name of a document is known it makes finding the
+document easy. This is important because people use search engines to find items
+that they already know exist, not just to find new information. Next, a title
+likely provides a stronger signal for relevance of a document than the main body
+of a text. However, the quality of the metadata may artificially decrease the relevance of
+documents related to the search.

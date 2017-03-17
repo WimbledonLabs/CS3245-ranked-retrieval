@@ -45,8 +45,7 @@ def weightsLNC(counts):
     pass
 
 def queryVec(query_line, df, N):
-    query_terms = [stemmer.stem(word) for word in query_line.strip().lower().split()]
-
+    query_terms = list(stems(query_line.strip().lower()))
     weights = weightsLTC(Counter(query_terms), df, N)
 
-    return cosineNormalize( weightsLTC(Counter(query_terms), df, N) )
+    return cosineNormalize(weights)
